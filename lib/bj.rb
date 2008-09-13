@@ -3,7 +3,7 @@ unless defined? Bj
   #
   # constants and associated attrs
   #
-    Bj::VERSION = "1.0.1" #unless defined? Bj::VERSION
+    Bj::VERSION = "1.0.4" #unless defined? Bj::VERSION
     def self.version() Bj::VERSION end
 
     Bj::LIBDIR = File.expand_path(File::join(File.dirname(__FILE__), "bj")) + File::SEPARATOR unless
