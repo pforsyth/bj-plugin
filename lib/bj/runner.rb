@@ -183,7 +183,7 @@ class Bj
               job = thread = stdout = stderr = nil
 
               Bj.transaction(options) do
-                now = Time.now.utc
+                now = Util.now
 
                 job = Bj::Table::Job.find :first,
                                           :conditions => ["state = ? and submitted_at <= ?", "pending", now],
@@ -200,7 +200,7 @@ class Bj
                 stdin = job.stdin || ''
                 stdout = job.stdout || ''
                 stderr = job.stderr || ''
-                started_at = Time.now.utc
+                started_at = Util.now
 
                 thread = Util.start command, :cwd=>Bj.rails_root, :env=>env, :stdin=>stdin, :stdout=>stdout, :stderr=>stderr
 
@@ -213,7 +213,7 @@ class Bj
               end
 
               exit_status = thread.value
-              finished_at = Time.now.utc
+              finished_at = Util.now
 
               Bj.transaction(options) do
                 job = Bj::Table::Job.find job.id 
@@ -287,7 +287,7 @@ class Bj
 
       def fill_morgue
         Bj.transaction do
-          now = Time.now.utc
+          now = Util.now
           jobs = Bj::Table::Job.find :all,
                                      :conditions => ["state = 'running' and runner = ?", Bj.hostname]
           jobs.each do |job|
@@ -309,7 +309,7 @@ class Bj
 
       def archive_jobs
         Bj.transaction do
-          now = Time.now.utc
+          now = Util.now
           too_old = now - Bj.ttl
           jobs = Bj::Table::Job.find :all,
                                      :conditions => ["(state = 'finished' or state = 'dead') and submitted_at < ?", too_old]

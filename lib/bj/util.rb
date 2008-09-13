@@ -105,6 +105,10 @@ class Bj
         b = e.backtrace.join("\n") rescue ""
         "#{ m }(#{ c })\n#{ b }"
       end
+
+      def now
+        Bj.config["utc"] ? Time.now.utc : Time.now
+      end
     end
     send :extend, ModuleMethods
   end
