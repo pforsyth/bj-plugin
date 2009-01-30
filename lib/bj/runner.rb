@@ -185,11 +185,11 @@ class Bj
               Bj.transaction(options) do
                 now = Util.now
 
-                job = Bj::Table::Job.find :first,
+                job = Bj::Table::Job.find_first_and_lock(
                                           :conditions => ["state = ? and submitted_at <= ?", "pending", now],
                                           :order => "priority DESC, submitted_at ASC", 
                                           :limit => 1,
-                                          :lock => true
+                                          :lock => true)
                 throw :no_jobs unless job
 
 

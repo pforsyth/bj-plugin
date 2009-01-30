@@ -1,3 +1,7 @@
+2009-01-30:
+  - fixed find(:first, :lock => true) issue with oracle databases
+  - converted clob (:text) columns to varchar (:string) when creating Bj tables (a bug in the oracle-adapter prevented the clobs from saving properly)
+
 2008-09-12:
   - brought the plugin up to 1.0.4 with the new utc option (Brandon Arbini)
 

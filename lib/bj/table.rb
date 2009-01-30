@@ -62,6 +62,24 @@ class Bj
       def reverse_each *a, &b
         list.reverse.each *a, &b
       end
+
+      # find(:first, :lock => true) does not work in oracle because
+      # of the implicit usage of :limit. instead we have to find :all
+      # and grab the first element returned. this is okay because the
+      # conditions supplied to the find will return a small result set,
+      # thus minimizing superfluous row locks.
+      def find_first_and_lock(options = {})
+        options[:lock] = true
+        db_config = configurations[Bj.rails_env.to_s]
+        case db_config['adapter']
+        when 'oracle','oci' 
+          options.delete(:limit) 
+          find(:all, options).first
+        else
+          find(:first, options)
+        end
+      end
+      
     end
     send :extend, ClassMethods
 
@@ -96,25 +114,26 @@ class Bj
       migration { 
         define_method :up do
           create_table table.table_name, :primary_key => table.primary_key, :force => true do |t|
-            t.column "command"        , :text
 
-            t.column "state"          , :text
+            t.column "command"        , :string, :limit => 2000
+
+            t.column "state"          , :string, :limit => 255
             t.column "priority"       , :integer
-            t.column "tag"            , :text
+            t.column "tag"            , :string, :limit => 1000
             t.column "is_restartable" , :integer
 
-            t.column "submitter"      , :text
-            t.column "runner"         , :text
+            t.column "submitter"      , :string, :limit => 255
+            t.column "runner"         , :string, :limit => 255
             t.column "pid"            , :integer
 
             t.column "submitted_at"   , :datetime
             t.column "started_at"     , :datetime
             t.column "finished_at"    , :datetime
 
-            t.column "env"            , :text
-            t.column "stdin"          , :text
-            t.column "stdout"         , :text
-            t.column "stderr"         , :text
+            t.column "env"            , :string, :limit => 4000
+            t.column "stdin"          , :string, :limit => 4000
+            t.column "stdout"         , :string, :limit => 4000
+            t.column "stderr"         , :string, :limit => 4000
             t.column "exit_status"    , :integer
           end
         end
@@ -148,6 +167,7 @@ class Bj
             :submitted_at => Time.now
           }
         end
+        
       end
       send :extend, ClassMethods
 
@@ -171,15 +191,15 @@ class Bj
       migration {
         define_method(:up) do
           create_table table.table_name, :primary_key => table.primary_key, :force => true do |t|
-            t.column "command"        , :text
+            t.column "command"        , :string, :limit => 2000
 
-            t.column "state"          , :text
+            t.column "state"          , :string, :limit => 255
             t.column "priority"       , :integer
-            t.column "tag"            , :text
+            t.column "tag"            , :string, :limit => 1000
             t.column "is_restartable" , :integer
 
-            t.column "submitter"      , :text
-            t.column "runner"         , :text
+            t.column "submitter"      , :string, :limit => 255
+            t.column "runner"         , :string, :limit => 255
             t.column "pid"            , :integer
 
             t.column "submitted_at"   , :datetime
@@ -187,10 +207,10 @@ class Bj
             t.column "finished_at"    , :datetime
             t.column "archived_at"    , :datetime
 
-            t.column "env"            , :text
-            t.column "stdin"          , :text
-            t.column "stdout"         , :text
-            t.column "stderr"         , :text
+            t.column "env"            , :string, :limit => 4000
+            t.column "stdin"          , :string, :limit => 4000
+            t.column "stdout"         , :string, :limit => 4000
+            t.column "stderr"         , :string, :limit => 4000
             t.column "exit_status"    , :integer
           end
         end
@@ -209,10 +229,10 @@ class Bj
       migration {
         define_method(:up) do
           create_table table.table_name, :primary_key => table.primary_key, :force => true do |t|
-            t.column "hostname"      , :text
-            t.column "key"           , :text
-            t.column "value"         , :text
-            t.column "cast"          , :text
+            t.column "hostname"      , :string, :limit => 255
+            t.column "key"           , :string, :limit => 255
+            t.column "value"         , :string, :limit => 4000
+            t.column "cast"          , :string, :limit => 255
           end
 
           begin
@@ -266,7 +286,7 @@ class Bj
           transaction do
             options.to_options!
             hostname = options[:hostname] || Bj.hostname
-            record = find :first, :conditions => conditions(:key => key, :hostname => hostname), :lock => true
+            record = find_first_and_lock :conditions => conditions(:key => key, :hostname => hostname), :lock => true
             cast = options[:cast] || cast_for(value)
             key = key.to_s
             value = value.to_s
@@ -283,7 +303,7 @@ class Bj
 
         def delete key
           transaction do
-            record = find :first, :conditions => conditions(:key => key), :lock => true
+            record = find_first_and_lock :conditions => conditions(:key => key), :lock => true
             if record
               record.destroy
               record
